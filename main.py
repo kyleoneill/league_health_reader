@@ -4,8 +4,26 @@ import cv2
 import time
 from multiprocessing import Process
 import pytesseract
+import requests
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+server_address = os.getenv("ADDRESS")
+server_port = os.getenv("PORT")
+
+
+def change_color_request(rgb):
+    (red, green, blue) = rgb
+    res = requests.post(url=f"http://{server_address}:{server_port}/set_color?red={red}&green={green}&blue={blue}")
+
+
+def handle_health_change(percent_health):
+    green = round(255 * percent_health)
+    red = 255 - green
+    change_color_request((red, green, 0))
 
 
 def ocr_image(img):
@@ -17,10 +35,12 @@ def ocr_image(img):
         split = raw_img.split('\n')
         health = split[0].split('/')
         mana = split[1].split('/')
-        percent_health = round((int(health[0])/int(health[1])) * 100)
-        percent_mana = round((int(mana[0]) / int(mana[1])) * 100)
-        print(f"Health: {health[0]}/{health[1]}: {percent_health}%", end=" ")
-        print(f"Mana: {mana[0]}/{mana[1]}: {percent_mana}%", end='\r')
+        percent_health = (int(health[0])/int(health[1]))
+        percent_mana = (int(mana[0]) / int(mana[1]))
+        print(f"Health: {health[0]}/{health[1]}: {round(percent_health * 100)}%", end=" ")
+        print(f"Mana: {mana[0]}/{mana[1]}: {round(percent_mana * 100)}%", end='\r')
+        handle_health_change(percent_health)
+        time.sleep(0.5)
     except:
         print(raw_img, end='\r')
 
